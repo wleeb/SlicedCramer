@@ -1,0 +1,4 @@
+#!/home/william/anaconda3/bin/python
+from cramer import *
+main()
+

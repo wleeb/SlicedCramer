@@ -1,0 +1,8 @@
+###rm int2
+###rm cdfinvs.o
+gcc -w -c wcprin.c
+gcc -o int2 wcprin.o -lm
+gcc -w -c cdfinvs.c
+gcc -o int2 cdfinvs.o wcprin.o -lm
+gcc -fPIC -shared -o cdfinvs.so cdfinvs.c wcprin.c
+##int2
