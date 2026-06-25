@@ -1,7 +1,5 @@
 
-
-                    *** Installation ***
-
+Installation instructions:
 
 - To compile the C code, run the script ``cdfinvs''.
 This creates the shared object file cdfinvs.so
