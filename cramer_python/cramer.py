@@ -18,25 +18,283 @@ import os
 def main():
     wp.prini(13,1)
 
-    n=50
+
+###    n=50
+    n=228
     nangls=int((n+6)/2)
     nangls=102
     m=n+2
 
-    p=2.5
-
-
-
     wp.prinf('n=',n,1)
     wp.prinf('nangls=',nangls,1)
     wp.prinf('m=',m,1)
-    wp.prin2('p=',p,1)
+
+    test_fast_rotate(n,nangls,m)
+
+###    exit()
+
+    p=3.4
+    n=50
+    m=n
+    nangls=2*n
 
     test_compare_slow(n,nangls,p,m)
 
-
-
     exit()
+
+
+#
+#
+#
+
+def test_fast_rotate(n,nangls,m):
+
+    gs_rot = np.empty([4000,4000],dtype='float64')
+    gs = np.empty([4000,4000],dtype='float64')
+    fs = np.empty([4000,4000],dtype='float64')
+    cen = np.empty(10,dtype='float64')
+
+    wids = np.empty(100,dtype='float64')
+    heis = np.empty(100,dtype='float64')
+    cens = np.empty([100,2],dtype='float64')
+#
+    wids2 = np.empty(100,dtype='float64')
+    heis2 = np.empty(100,dtype='float64')
+    cens2 = np.empty([100,2],dtype='float64')
+
+    cens2_rot = np.empty([100,2],dtype='float64')
+
+    ts = np.empty(8000,dtype='float64')
+
+    kfs = np.empty(8000,dtype='int32')
+    kfs2 = np.empty(8000,dtype='int32')
+
+    fzs = np.empty(80000,dtype='complex128')
+    fhats = np.empty(80000,dtype='complex128')
+    freqs = np.empty(80000,dtype='float64')
+    freqs2 = np.empty(80000,dtype='float64')
+
+    vnorms = np.empty(10000,dtype='float64')
+    vnorms2 = np.empty(10000,dtype='float64')
+    wdists = np.empty(10000,dtype='float64')
+    wdists2 = np.empty(10000,dtype='float64')
+
+    dists = np.empty(40000,dtype='float64')
+    dists2 = np.empty(40000,dtype='float64')
+
+
+    rng = rnd.default_rng(61)
+
+
+
+#
+#    interval radius and endpoints
+#
+    r = 8.40301
+    r = 9.40301
+    r = 10.40301
+    r = 11.40301
+    r = 12.40301
+
+
+    wp.prin2('r=',r,1)
+
+
+    wp.prinf('n=',n,1)
+
+
+#
+#    gaussian mixture parameters
+#
+    ngaus = 8
+    cens[0:ngaus,0:2] = rng.normal(0,0.312,[ngaus,2])
+    cens2[0:ngaus,0:2] = rng.normal(0,0.3102,[ngaus,2])
+
+
+    krot = np.int(nangls/3)
+    krot = 2
+###    krot = 0
+    theta = 2*np.pi * krot / nangls
+
+    theta = np.pi * 1.404391
+
+###    theta=np.pi/2
+
+    wp.prin2('theta=',theta,1)
+
+
+    rotcols(theta,cens2,ngaus,cens2_rot)
+
+    wp.prinr2('cens2_rot=',cens2_rot,ngaus,2)
+    wp.prinr2('cens2=',cens2,ngaus,2)
+    
+
+###    exit()
+
+
+    wp.prinr2('cens=',cens,ngaus,2)
+    wp.prinr2('cens2=',cens2,ngaus,2)
+###    exit()
+
+    wids[0:ngaus] = rng.uniform(.1,.3,ngaus)
+    wids2[0:ngaus] = rng.uniform(.1,.3,ngaus)
+
+    wp.prin2('wids=',wids,ngaus)
+
+
+    heis[0:ngaus] = rng.uniform(1,3,ngaus)
+    heis2[0:ngaus] = rng.uniform(1,3,ngaus)
+    wp.prin2('heis=',heis,ngaus)
+
+    hsum = 0.0
+    for i in range(0,ngaus):
+        hsum = hsum + heis[i]
+
+    for i in range(0,ngaus):
+        heis[i] = heis[i] / hsum
+
+
+    hsum = 0.0
+    for i in range(0,ngaus):
+        hsum = hsum + heis[i]
+
+    wp.prin2('hsum=',hsum,1)
+    chk0 = 1-hsum
+    wp.prin2('chk0=',chk0,1)
+
+
+    hsum2 = 0.0
+    for i in range(0,ngaus):
+        hsum2 = hsum2 + heis2[i]
+
+    for i in range(0,ngaus):
+        heis2[i] = heis2[i] / hsum2
+
+
+    hsum2 = 0.0
+    for i in range(0,ngaus):
+        hsum2 = hsum2 + heis2[i]
+
+    wp.prin2('hsum2=',hsum2,1)
+    chk0 = 1-hsum2
+    wp.prin2('chk0=',chk0,1)
+
+
+
+
+    dt = 2*r/n
+
+#
+#    grid on interval and gaussian mixture
+#
+    ts[0:n+1] = np.linspace(-r,r,n+1)
+
+
+    evalmix2d_fast(ts,n,cens,wids,heis,ngaus,fs)
+    evalmix2d_fast(ts,n,cens2,wids2,heis2,ngaus,gs)
+
+
+    evalmix2d_fast(ts,n,cens2_rot,wids2,heis2,ngaus,gs_rot)
+
+
+###    wp.prin2('fs=',fs,n)
+###    wp.prin2('gs=',gs,n)
+
+
+#
+#    check 2D integrals are 1
+#
+###    wp.prin2('fs=',fs[:,0:n],12)
+    fint = np.sum(fs[0:n,0:n]) * dt**2
+    gint = np.sum(gs[0:n,0:n]) * dt**2
+
+    wp.prin2('fint=',fint,1)
+    wp.prin2('gint=',gint,1)
+
+    chk0 = 1-fint
+    wp.prin2('chk0, fint=',chk0,1)
+
+    chk0 = 1-gint
+    wp.prin2('chk0, gint=',chk0,1)
+
+
+
+###    dist2 = slicedcramer_nufft(fs,gs,ts,n,r,p,nangls,vnorms,kfs,freqs)
+
+
+    nrots=np.int(nangls + 1)
+
+    nrots = 2*nangls
+    nrots=np.int(nangls**2 / 2)
+    wp.prinf('nrots=',nrots,1)
+
+###    eucl_polar(gs,gs_rot,ts,n,r,nangls,cens,wids,heis,ngaus)
+
+    dist = slicedeucl_rots(gs_rot,gs,ts,n,r,nangls,nrots,dists,dists2)
+
+    dist_dumb = np.min(dists[0:nangls])
+
+    wp.prin2('dist=',dist,1)
+    wp.prin2('dist_dumb=',dist_dumb,1)
+
+
+    wp.prin2('dists=',dists,nangls)
+    wp.prin2('dists2=',dists2,nrots)
+
+    cdist = slicedcramer_rots(gs_rot,gs,ts,n,r,nangls,nrots,dists,dists2)
+
+    wp.prin2('dists=',dists,nangls)
+    wp.prin2('dists2=',dists2,nrots)
+
+
+    cdist_dumb = np.min(dists[0:nangls])
+
+    wp.prin2('cdist=',cdist,1)
+    wp.prin2('cdist_dumb=',cdist_dumb,1)
+
+
+###    exit()
+
+
+    wdist = slicedwasser_rots(gs_rot,gs,ts,n,r,nangls,m,nrots,dists,dists2)
+
+
+    p=2
+    wdist2 = slicedwasser_nufft(gs_rot,gs,ts,n,r,p,nangls,m,wdists2)
+
+    wp.prin2('dists=',dists,nangls)
+    wp.prin2('dists2=',dists2,nrots)
+
+
+    wp.prin2('dist=',dists,1)
+    wp.prin2('wdist2=',wdist2,1)
+
+    chk0 = dists[0] - wdist2
+    wp.prin2('chk0=',chk0,1)
+
+
+    wp.prin2('wdists2=',wdists2,nangls)
+
+    wp.prin2('wdist=',wdist,1)
+    wp.prin2('cdist=',cdist,1)
+
+
+    return()
+
+#
+#
+#
+
+def rotcols(angl,cols,m,cols2):
+
+    cc = np.cos(angl)
+    ss = np.sin(angl)
+
+    for i in range(0,m):
+        cols2[i,0] = cc*cols[i,0] - ss*cols[i,1]
+        cols2[i,1] = ss*cols[i,0] + cc*cols[i,1]
+
+    return()
 
 #
 #
@@ -190,8 +448,8 @@ def test_compare_slow(n,nangls,p,m):
 #    evaluate sliced Cramer fast and slow ways and compare
 #
     wp.prini(0,0)
-    slnorm = slicedcramer_nufft(fs,gs,ts,n,r,p,nangls,vnorms,kfs,freqs)
-    slnorm2 = slicedcramer_dumb(fs,gs,ts,n,r,p,nangls,vnorms2,kfs2,freqs2)
+    slnorm = slicedcramer_nufft(fs,gs,ts,n,r,p,nangls,vnorms)
+    slnorm2 = slicedcramer_dumb(fs,gs,ts,n,r,p,nangls,vnorms2)
 
 
     wp.prini(13,0)
@@ -209,14 +467,6 @@ def test_compare_slow(n,nangls,p,m):
     chk0 = lpdist_fast(vnorms,vnorms2,nangls,2,1)
     wp.prin2('chk0=',chk0,1)
 
-    chk0 = lpdist_fast(freqs,freqs2,n,2,1)
-    wp.prin2('chk0=',chk0,1)
-
-
-###    exit()
-
-###    wp.prini(13,0)
-
 
 #
 #    evaluate sliced Wasserstein fast and slow ways and compare
@@ -224,8 +474,8 @@ def test_compare_slow(n,nangls,p,m):
     wp.prini(0,0)
 
 
-    wdist2 = slicedwasser_nufft(fs,gs,ts,n,r,p,nangls,m,wdists2,freqs2,kfs)
-    wdist = slicedwasser_dumb(fs,gs,ts,n,r,p,nangls,m,wdists,freqs,kfs)
+    wdist2 = slicedwasser_nufft(fs,gs,ts,n,r,p,nangls,m,wdists2)
+    wdist = slicedwasser_dumb(fs,gs,ts,n,r,p,nangls,m,wdists)
 
     wp.prini(13,0)
 
@@ -267,10 +517,124 @@ def test_compare_slow(n,nangls,p,m):
 
     return()
 
+def wasser_fast(fvals,gvals,tgrid,m,n,a,b,p,fints,gints,finvs,ginvs,difs):
+
+    ivals_f = np.empty(m+10,dtype='int32')
+    ivals_g = np.empty(m+10,dtype='int32')
+    yedges=np.empty(m+10,dtype='float64')
+    ys=np.empty(m+10,dtype='float64')
+
+
+    wp.prinf('n=',n,1)
+    wp.prinf('m=',m,1)
+
+
+    wp.prin2('tgrid=',tgrid,n+1)
+
+    wp.prin2('a=',a,1)
+    wp.prin2('b=',b,1)
+
+    hh=(b-a)/n
+
+    wp.prin2('hh=',hh,1)
+
+
 #
+#    partial integrals on grid
 #
+    fl = np.cumsum(fvals[0:n+1])*hh
+    fr = np.cumsum(fvals[1:n+1])*hh
+
+    fints[0] = 0
+    fints[1:n] = (fl[0:n-1] + fr[0:n-1]) / 2
+    fints[n]=1
+
+
+
+    gl = np.cumsum(gvals[0:n+1])*hh
+    gr = np.cumsum(gvals[1:n+1])*hh
+
+    gints[0] = 0
+    gints[1:n] = (gl[0:n-1] + gr[0:n-1]) / 2
+    gints[n]=1
+
+    wp.prin2('fints=',fints,n+1)
+    wp.prin2('gints=',gints,n+1)
+
+
+    ymin = 0.0
+    ymax = 1.0
+
+    wp.prin2('ymin=',ymin,1)
+    wp.prin2('ymax=',ymax,1)
+
+#
+#    edges between 0 and 1 -- includes endpoints
+#
+    yedges=np.linspace(ymin,ymax,m+1)
+
+    dy = yedges[1] - yedges[0]
+
+    wp.prin2('yedges=',yedges,m+1)
+    wp.prin2('dy=',dy,1)
+
+#
+#    midpoint grid between 0 and 1
+#
+    ys[0:m] = (yedges[0:m] + yedges[1:m+1])/2
+
+    wp.prin2('ys=',ys,m)
+
+    dy2 = ys[1] - ys[0]
+    wp.prin2('dy2=',dy2,1)
+    chk0 = dy2 - dy
+    wp.prin2('chk0=',chk0,1)
+
+
+#
+#    inverse CDFs over [0,1]
 #
 
+    cdfinvs_c(ys,m,n,finvs,fints,tgrid,ivals_f)
+###    cdfinvs_march(ys,m,a,b,n,finvs,fints,tgrid,ivals_f)
+
+
+
+    cdfinvs_c(ys,m,n,ginvs,gints,tgrid,ivals_g)
+###    cdfinvs_march(ys,m,a,b,n,ginvs,gints,tgrid,ivals_g)
+
+
+
+#
+#    distance between inverse CDFs, by midpoint rule
+#
+
+    difs[0:m] = finvs[0:m] - ginvs[0:m]
+
+
+    if (p<=0 or p==np.inf):
+        wdist = np.max(np.abs(difs[0:m]))
+        return(wdist)
+
+    wdist = la.norm(difs[0:m],ord=p)
+    wdist = wdist * dy**(1/p)
+
+
+###    wp.prini(13,0)
+    wp.prin2('difs=',difs,m)
+
+
+    wp.prin2('wdist, inside=',wdist,1)
+
+###    exit()
+
+
+
+    return(wdist)
+
+#
+#
+#
 ####################################################################################
 #
 #            This is the end of the test code and the beginning of the
@@ -285,12 +649,18 @@ def test_compare_slow(n,nangls,p,m):
 #        FINUFFT to evaluate the Radon transform and vectorization throughout.
 #  slicedwasser_nufft - evaluates the 2D sliced p-Wasserstein distance, using the
 #        FINUFFT to evaluate the Radon transform and vectorization throughout.
-#
-#
-#            These additional functions, among others, may be useful:
-#
 #  slicedlebesg_nufft - evaluates the 2D sliced p-Lebesgue distance, using the
 #        FINUFFT to evaluate the Radon transform and vectorization throughout.
+#  slicedcramer_rots - evaluates the 2D sliced 2-Cramer distances between all
+#        rotations of the input functions.
+#  slicedwasser_rots - evaluates the 2D sliced 2-Wasserstein distances between
+#        all rotations of the input functions.
+#  slicedeucl_rots - evaluates the 2D sliced Euclidean distances between all
+#        rotations of the input functions.
+#
+#
+#            These additional functions, among others, may also be useful:
+#
 #  slicedlebesg_dumb - evaluates the 2D sliced p-Lebesgue distance, without the
 #        FINUFFT or vectorization. It is a slower but more transparent version of
 #        slicedlebesg_nufft.
@@ -318,7 +688,673 @@ def test_compare_slow(n,nangls,p,m):
 #
 #
 
-def slicedcramer_nufft(hs,gs,ts,n,r,p,nangls,vnorms,kfs,freqs):
+def slicedcramer_rots(gs,hs,ts,n,r,nangls,nrots,dists,dists2):
+#
+#                            description:
+#
+#    This code evaluates the sliced 2-Cramer distances between a function
+#    h and all rotations of a function g. Both h and g are evaluated on on a
+#    2D grid of equispaced points. The distances are evaluated both ``on-grid''
+#    and ``off-grid'', the sizes of which are determined by the user.
+#
+#
+#                        input parameters:
+#
+#  hs,gs - n-by-n real arrays containing the samples of h and g
+#    on [-r,r) x [-r,r) (only the left endpoints are included)
+#  ts - n-length real vector of equispaced nodes on [-r,r) (the left
+#    endpoint a is included, but not b)
+#  n - the number of samples on each dimension; assumed to be an even integer.
+#    To be clear, the total number of samples is n^2
+#  r - the radius of the interval
+#  nangls - the number of projection angles used to evaluate the sliced distances;
+#    suggest setting it to O(n)
+#  nrots - the number of rotations for which distances are computed; must be
+#    greater than or equal to nangls, and can be as large as O(n**2)
+#
+#
+#                        output parameters:
+#
+#  dists - nangls-length array containing the distances between h and
+#    R_phi(g), for angles phi on the same grid used to evaluate the distances
+#  dists2 - nrots-length array containing the distances between h and
+#    R_phi(g), for angles phi on the extended grid
+#
+#
+#                    return parameters:
+#
+#  dist_min - the minimum sliced 2-Cramer distance on the extended grid, i.e.
+#    the minimum of dists2
+#
+#
+#
+
+    kfs = np.empty(n,dtype='int32')
+    freqs = np.empty(n,dtype='float64')
+
+    prods = np.empty(nangls,dtype='float64')
+    prods2 = np.empty(nrots,dtype='float64')
+###    dists = np.empty(nangls,dtype='float64')
+###    dists2 = np.empty(nangls,dtype='float64')
+
+    angls = np.empty(nangls+1,dtype='float64')
+
+    difs_arr = np.empty([nangls,n],dtype='float64')
+#
+    gprojs_arr = np.empty([nangls,n],dtype='float64')
+    ghats_arr = np.empty([nangls,n],dtype='complex128')
+    gphats_arr = np.empty([nangls,n],dtype='complex128')
+    gps_arr = np.empty([nangls,n],dtype='float64')
+#
+    hprojs_arr = np.empty([nangls,n],dtype='float64')
+    hhats_arr = np.empty([nangls,n],dtype='complex128')
+    hphats_arr = np.empty([nangls,n],dtype='complex128')
+    hps_arr = np.empty([nangls,n],dtype='float64')
+
+    hps_rot = np.empty([nangls,n],dtype='float64')
+
+    hhats_rot = np.empty([nangls,n],dtype='complex128')
+
+###    fprojs_arr[0:nangls,0:n] = 10000
+
+    xs = np.empty(n*nangls,dtype='float64')    
+    ys = np.empty(n*nangls,dtype='float64')    
+
+    gs_comp = np.empty([n,n],dtype='complex128')
+    hs_comp = np.empty([n,n],dtype='complex128')
+
+    gczs = np.empty(n*nangls,dtype='complex128')
+    hczs = np.empty(n*nangls,dtype='complex128')
+
+
+
+    wp.prinf('nangls=',nangls,1)
+    wp.prin2('ts=',ts,n+1)
+    wp.prin2('r=',r,1)
+
+
+    rq = n/(4*r)
+###    wp.prin2('rq=',rq,1)
+
+#
+#    frequency indices and values, DFT ordering
+#
+    nh2=np.int(n/2)
+
+    kfs[0:n] = range(0,n)
+    kfs[nh2:n] = kfs[nh2:n] - n
+    freqs[0:n] = kfs[0:n] / (2*r)
+
+#
+#    angles and 2D frequencies
+#
+    rpi = np.pi
+    angls[0:nangls+1] = np.linspace(0,2*rpi,nangls+1)
+
+
+    wp.prin2('angls=',angls,nangls+1)
+
+###    exit()
+
+
+    sfs_all = np.outer(np.cos(angls[0:nangls]),freqs[0:n])
+    tfs_all = np.outer(np.sin(angls[0:nangls]),freqs[0:n])
+#
+    xs[0:n*nangls] = 2*np.pi*np.reshape(sfs_all,[1,nangls*n]) / (2*rq)
+    ys[0:n*nangls] = 2*np.pi*np.reshape(tfs_all,[1,nangls*n]) / (2*rq)
+
+#
+#    compute the projections with the FINUFFT
+#
+    gs_comp[0:n,0:n] = gs[0:n,0:n]
+    finufft.nufft2d2(xs, ys, gs_comp, gczs, eps=1e-15, isign=-1)
+    gczs = gczs / (2*rq)**2
+    ghats_arr[0:nangls,0:n] = np.reshape(gczs[0:nangls*n],[nangls,n])
+
+    hs_comp[0:n,0:n] = hs[0:n,0:n]
+    finufft.nufft2d2(xs, ys, hs_comp, hczs, eps=1e-15, isign=-1)
+    hczs = hczs / (2*rq)**2
+    hhats_arr[0:nangls,0:n] = np.reshape(hczs[0:nangls*n],[nangls,n])
+
+
+
+#
+#    evaluate the volterra transforms
+#
+    voltr_fourier_fast(ghats_arr,ts,nangls,n,-r,r,\
+        gps_arr,gphats_arr,kfs,freqs)
+
+    voltr_fourier_fast(hhats_arr,ts,nangls,n,-r,r,\
+        hps_arr,hphats_arr,kfs,freqs)
+
+
+    nh2 = np.int(n/2)
+
+    wp.prinr2('gps_arr=',gps_arr[:,nh2:],10,6)
+    wp.prinr2('hps_arr=',hps_arr[:,nh2:],10,6)
+
+    distalign_core(gps_arr,hps_arr,nangls,n,nrots,r,dists,prods2,dists2)
+
+
+    wp.prin2('dists=',dists,nangls)
+    wp.prin2('dists2=',dists2,nrots)
+
+
+###    exit()
+
+    dist_min = np.min(dists2[0:nrots])
+
+
+    return(dist_min)
+
+#
+#
+#
+
+def slicedeucl_rots(gs,hs,ts,n,r,nangls,nrots,dists,dists2):
+#
+#                            description:
+#
+#    This code evaluates the sliced Euclidean distances between a function
+#    h and all rotations of a function g. Both h and g are evaluated on on a
+#    2D grid of equispaced points. The distances are evaluated both ``on-grid''
+#    and ``off-grid'', the sizes of which are determined by the user.
+#
+#
+#                        input parameters:
+#
+#  hs,gs - n-by-n real arrays containing the samples of h and g
+#    on [-r,r) x [-r,r) (only the left endpoints are included)
+#  ts - n-length real vector of equispaced nodes on [-r,r) (the left
+#    endpoint a is included, but not b)
+#  n - the number of samples on each dimension; assumed to be an even integer.
+#    To be clear, the total number of samples is n^2
+#  r - the radius of the interval
+#  nangls - the number of projection angles used to evaluate the sliced distances;
+#    suggest setting it to O(n)
+#  nrots - the number of rotations for which distances are computed; must be
+#    greater than or equal to nangls, and can be as large as O(n**2)
+#
+#
+#                        output parameters:
+#
+#  dists - nangls-length array containing the distances between h and
+#    R_phi(g), for angles phi on the same grid used to evaluate the distances
+#  dists2 - nrots-length array containing the distances between h and
+#    R_phi(g), for angles phi on the extended grid
+#
+#
+#                    return parameters:
+#
+#  dist_min - the minimum sliced Euclidean distance on the extended grid, i.e.
+#    the minimum of dists2
+#
+#
+#
+
+    kfs = np.empty(n,dtype='int32')
+    freqs = np.empty(n,dtype='float64')
+
+    prods = np.empty(nangls,dtype='float64')
+    prods2 = np.empty(nrots,dtype='float64')
+
+    angls = np.empty(nangls+1,dtype='float64')
+
+    difs_arr = np.empty([nangls,n],dtype='float64')
+#
+    gprojs_arr = np.empty([nangls,n],dtype='float64')
+    ghats_arr = np.empty([nangls,n],dtype='complex128')
+    gphats_arr = np.empty([nangls,n],dtype='complex128')
+    gps_arr = np.empty([nangls,n],dtype='float64')
+#
+    hprojs_arr = np.empty([nangls,n],dtype='float64')
+    hhats_arr = np.empty([nangls,n],dtype='complex128')
+    hphats_arr = np.empty([nangls,n],dtype='complex128')
+    hps_arr = np.empty([nangls,n],dtype='float64')
+
+###    fprojs_arr[0:nangls,0:n] = 10000
+
+    xs = np.empty(n*nangls,dtype='float64')    
+    ys = np.empty(n*nangls,dtype='float64')    
+
+    gs_comp = np.empty([n,n],dtype='complex128')
+    hs_comp = np.empty([n,n],dtype='complex128')
+
+    gczs = np.empty(n*nangls,dtype='complex128')
+    hczs = np.empty(n*nangls,dtype='complex128')
+
+
+
+    wp.prinf('nangls=',nangls,1)
+    wp.prin2('ts=',ts,n+1)
+    wp.prin2('r=',r,1)
+
+
+    rq = n/(4*r)
+###    wp.prin2('rq=',rq,1)
+
+#
+#    frequency indices and values, DFT ordering
+#
+    nh2=np.int(n/2)
+
+    kfs[0:n] = range(0,n)
+    kfs[nh2:n] = kfs[nh2:n] - n
+    freqs[0:n] = kfs[0:n] / (2*r)
+
+#
+#    angles and 2D frequencies
+#
+    rpi = np.pi
+    angls[0:nangls+1] = np.linspace(0,2*rpi,nangls+1)
+
+
+    wp.prin2('angls=',angls,nangls+1)
+
+###    exit()
+
+
+    sfs_all = np.outer(np.cos(angls[0:nangls]),freqs[0:n])
+    tfs_all = np.outer(np.sin(angls[0:nangls]),freqs[0:n])
+#
+    xs[0:n*nangls] = 2*np.pi*np.reshape(sfs_all,[1,nangls*n]) / (2*rq)
+    ys[0:n*nangls] = 2*np.pi*np.reshape(tfs_all,[1,nangls*n]) / (2*rq)
+
+#
+#    compute the projections with the FINUFFT
+#
+    gs_comp[0:n,0:n] = gs[0:n,0:n]
+    finufft.nufft2d2(xs, ys, gs_comp, gczs, eps=1e-15, isign=-1)
+    gczs = gczs / (2*rq)**2
+    ghats_arr[0:nangls,0:n] = np.reshape(gczs[0:nangls*n],[nangls,n])
+
+    hs_comp[0:n,0:n] = hs[0:n,0:n]
+    finufft.nufft2d2(xs, ys, hs_comp, hczs, eps=1e-15, isign=-1)
+    hczs = hczs / (2*rq)**2
+    hhats_arr[0:nangls,0:n] = np.reshape(hczs[0:nangls*n],[nangls,n])
+
+
+
+
+#
+#    projections in real space
+#
+    iftrs_fast(ghats_arr,freqs,ts,gprojs_arr,nangls,n)
+    iftrs_fast(hhats_arr,freqs,ts,hprojs_arr,nangls,n)
+
+
+#
+#    all distances
+#
+    distalign_core(gprojs_arr,hprojs_arr,nangls,n,nrots,r,dists,prods2,dists2)
+
+
+    wp.prin2('dists=',dists,nangls)
+    wp.prin2('dists2=',dists2,nrots)
+
+
+    dist_min = np.min(dists2[0:nrots])
+
+
+    return(dist_min)
+
+#
+#
+#
+
+def slicedwasser_rots(gs,hs,ts,n,r,nangls,m,nrots,dists,dists2):
+#
+#                            description:
+#
+#    This code evaluates the sliced 2-Wasserstein distances between a function
+#    h and all rotations of a function g. Both h and g are evaluated on on a
+#    2D grid of equispaced points. The distances are evaluated both ``on-grid''
+#    and ``off-grid'', the sizes of which are determined by the user.
+#
+#
+#                        input parameters:
+#
+#  hs,gs - n-by-n real arrays containing the samples of h and g
+#    on [-r,r) x [-r,r) (only the left endpoints are included)
+#  ts - n-length real vector of equispaced nodes on [-r,r) (the left
+#    endpoint a is included, but not b)
+#  n - the number of samples on each dimension; assumed to be an even integer.
+#    To be clear, the total number of samples is n^2
+#  r - the radius of the interval
+#  nangls - the number of projection angles used to evaluate the sliced distances;
+#    suggest setting it to O(n)
+#  m - the number of points used to discretized the inverse CDFs
+#  nrots - the number of rotations for which distances are computed; must be
+#    greater than or equal to nangls, and can be as large as O(n**2)
+#
+#
+#                        output parameters:
+#
+#  dists - nangls-length array containing the distances between h and
+#    R_phi(g), for angles phi on the same grid used to evaluate the distances
+#  dists2 - nrots-length array containing the distances between h and
+#    R_phi(g), for angles phi on the extended grid
+#
+#
+#                    return parameters:
+#
+#  dist_min - the minimum sliced 2-Wasserstein distance on the extended grid,
+#    i.e. the minimum of dists2
+#
+#
+
+    prods = np.empty(nangls,dtype='float64')
+    prods2 = np.empty(nrots,dtype='float64')
+
+    kfs = np.empty(n,dtype='int32')
+    freqs = np.empty(n,dtype='float64')
+#
+    angls = np.empty(nangls+1,dtype='float64')
+#
+    hprojs_arr = np.empty([nangls,n],dtype='float64')
+    hhats_arr = np.empty([nangls,n],dtype='complex128')
+    hphats_arr = np.empty([nangls,n],dtype='complex128')
+    hps_arr = np.empty([nangls,n+1],dtype='float64')
+    hinvs_arr = np.empty([nangls,m+1],dtype='float64')
+#
+    gprojs_arr = np.empty([nangls,n],dtype='float64')
+    ghats_arr = np.empty([nangls,n],dtype='complex128')
+    gphats_arr = np.empty([nangls,n],dtype='complex128')
+    gps_arr = np.empty([nangls,n+1],dtype='float64')
+    ginvs_arr = np.empty([nangls,m+1],dtype='float64')
+#
+
+    hczs = np.empty(n*nangls,dtype='complex128')
+    gczs = np.empty(n*nangls,dtype='complex128')
+
+    xs = np.empty(n*nangls,dtype='float64')    
+    ys = np.empty(n*nangls,dtype='float64')    
+    hs_comp = np.empty([n,n],dtype='complex128')
+    gs_comp = np.empty([n,n],dtype='complex128')
+
+    wp.prinf('nangls=',nangls,1)
+    wp.prin2('ts=',ts,n+1)
+    wp.prin2('r=',r,1)
+
+###    wp.prinr2('fs=',fs,n,6)
+
+
+    p=2
+
+    rq = n/(4*r)
+
+
+#
+#    frequency indices and values, DFT ordering
+#
+    nh2=np.int(n/2)
+
+    kfs[0:n] = range(0,n)
+    kfs[nh2:n] = kfs[nh2:n] - n
+    freqs[0:n] = kfs[0:n] / (2*r)
+
+###    wp.prinf('kfs=',kfs,n)
+###    wp.prin2('freqs=',freqs,n+1)
+    wp.prin2('rq=',rq,1)
+
+#
+#    angles and 2D frequencies
+#
+    rpi = np.pi
+    angls[0:nangls+1] = np.linspace(0,2*rpi,nangls+1)
+
+###    dangl = 2*rpi / nangls
+
+
+###    wp.prin2('angls=',angls,nangls+1)
+###    wp.prin2('dangl=',dangl,1)
+
+
+
+    sfs_all = np.outer(np.cos(angls[0:nangls]),freqs[0:n])
+    tfs_all = np.outer(np.sin(angls[0:nangls]),freqs[0:n])
+
+
+    xs[0:n*nangls] = 2*np.pi*np.reshape(sfs_all,[1,nangls*n]) / (2*rq)
+    ys[0:n*nangls] = 2*np.pi*np.reshape(tfs_all,[1,nangls*n]) / (2*rq)
+
+
+
+#
+#    projections of h
+#
+    hs_comp[0:n,0:n] = hs[0:n,0:n]
+    finufft.nufft2d2(xs, ys, hs_comp, hczs, eps=1e-15, isign=-1)
+    hczs = hczs / (2*rq)**2
+    hhats_arr[0:nangls,0:n] = np.reshape(hczs[0:nangls*n],[nangls,n])
+    iftrs_fast(hhats_arr,freqs,ts,hprojs_arr,nangls,n)
+
+
+#
+#    projections of g
+#
+    gs_comp[0:n,0:n] = gs[0:n,0:n]
+    finufft.nufft2d2(xs, ys, gs_comp, gczs, eps=1e-15, isign=-1)
+    gczs = gczs / (2*rq)**2
+    ghats_arr[0:nangls,0:n] = np.reshape(gczs[0:nangls*n],[nangls,n])
+    iftrs_fast(ghats_arr,freqs,ts,gprojs_arr,nangls,n)
+
+
+    wp.prinz('hhats_arr=',hhats_arr,n)
+    wp.prinz('ghats_arr=',ghats_arr,n)
+
+
+    wp.prinf('nangls=',nangls,1)
+    wp.prinf('n=',n,1)
+
+###    exit()
+
+    wp.prin2('hprojs_arr=',hprojs_arr,n)
+    wp.prin2('gprojs_arr=',gprojs_arr,30)
+
+
+#
+#    compute all wasserstein distances
+#
+
+    invcdfs_fast(hprojs_arr,gprojs_arr,ts,m,n,-r,r, \
+        hps_arr,gps_arr,hinvs_arr,ginvs_arr,nangls)
+
+    dhalf=1/2
+    distalign_core(ginvs_arr,hinvs_arr,nangls,m,nrots,dhalf,dists,prods2,dists2)
+
+
+###    dist_min = np.min(dists[0:nangls])
+    dist_min = np.min(dists2[0:nrots])
+
+
+    return(dist_min)
+
+#
+#
+#
+
+def voltr_fourier_fast(fzs,ts,m,n,a,b,fps,fpzs,kfs,freqs):
+#
+#    vectorized code for computing the Volterra transforms of m functions,
+#    taking as inputs n values of their Fourier transforms on an
+#    equispaced frequency grid.
+#
+
+    zzzs = np.empty(n,dtype='complex128')
+
+    nh2 = np.int(n/2)
+
+#
+#    phase factors
+#
+    zzzs[0:n] = np.exp(2*np.pi*1j*freqs[0:n]*a)
+
+
+#
+#    fourier coefficients of partial integral
+#
+    fpzs[0:m,1:n] = np.divide(fzs[0:m,1:n],freqs[1:n])
+    fpzs[0:m,1:n] = fpzs[0:m,1:n] / (2*np.pi*1j)
+    fpzs[0:m,nh2] = 0
+#
+    fpzs[0:m,0] = -np.sum(np.multiply(fpzs[0:m,1:nh2],zzzs[1:nh2]),1)
+    fpzs[0:m,0] = fpzs[0:m,0]-np.sum(np.multiply(fpzs[0:m,nh2+1:n],zzzs[nh2+1:n]),1)
+
+
+###    fpzs[0:m,0] = 0
+
+
+#
+#    evaluate partial integrals and find norms
+#
+    iftrs_fast(fpzs,freqs,ts,fps,m,n)
+
+
+    return()
+
+#
+#
+#
+
+def invcdfs_fast(hs,gs,ts,m,n,a,b,hps,gps,hinvs,ginvs,k):
+
+    ivals_h = np.empty([k,m],dtype='int32')
+    ivals_g = np.empty([k,m],dtype='int32')
+    yedges=np.empty(m+1,dtype='float64')
+    ys=np.empty(m+1,dtype='float64')
+
+    hh=(b-a)/n
+
+    hl = np.cumsum(hs[0:k,0:n+1],axis=1)*hh
+    hr = np.cumsum(hs[0:k,1:n+1],axis=1)*hh
+
+    hps[0:k,0] = 0
+    hps[0:k,1:n] = (hl[0:k,0:n-1] + hr[0:k,0:n-1]) / 2
+    hps[0:k,n]=1
+
+
+
+    gl = np.cumsum(gs[0:k,0:n+1],axis=1)*hh
+    gr = np.cumsum(gs[0:k,1:n+1],axis=1)*hh
+
+    gps[0:k,0] = 0
+    gps[0:k,1:n] = (gl[0:k,0:n-1] + gr[0:k,0:n-1]) / 2
+    gps[0:k,n]=1
+
+
+    ymin = 0.0
+    ymax = 1.0
+
+    yedges=np.linspace(ymin,ymax,m+1)
+
+    dy = yedges[1] - yedges[0]
+    ys[0:m] = (yedges[0:m] + yedges[1:m+1])/2
+
+
+#
+#    distance between inverse CDFs, by midpoint rule
+#
+    cdfinvs_all_c(ts,m,n,hps,hinvs,ivals_h,ys,k)
+    cdfinvs_all_c(ts,m,n,gps,ginvs,ivals_g,ys,k)
+
+
+    return()
+
+#
+#
+#
+
+def distalign_core(gps_arr,hps_arr,nangls,n,nrots,r,dists,prods2,dists2):
+#
+#    evaluates all inner products and distances between rotated functions,
+#    with values on a polar grid; inner products/distances are evaluated on
+#    a finer grid of angles
+#
+    gf_rings = np.empty([nangls,n],dtype='complex128')
+    hf_rings = np.empty([nangls,n],dtype='complex128')
+    pf_rings = np.empty([nangls,n],dtype='complex128')
+
+    p_rings = np.empty([nangls,n],dtype='float64')
+
+    prods = np.empty(nangls,dtype='float64')
+
+    p2_rings = np.empty([nrots,n],dtype='float64')
+    pf2_rings = np.empty([nrots,n],dtype='complex128')
+
+
+
+    dt = 2*r / n
+    da = 1/nangls
+
+    gps_normsq = np.sum(gps_arr[0:nangls,0:n]**2) * da * dt
+    hps_normsq = np.sum(hps_arr[0:nangls,0:n]**2) * da * dt
+
+
+    gf_rings[0:nangls,0:n] = dft.fft(gps_arr[0:nangls,0:n],axis=0) * da
+    hf_rings[0:nangls,0:n] = dft.fft(hps_arr[0:nangls,0:n],axis=0) * da
+
+
+    pf_rings[0:nangls,0:n] = gf_rings[0:nangls,0:n] * np.conj(hf_rings[0:nangls,0:n])
+###    p_rings[0:nangls,jj] = np.real(dft.ifft(pf_rings[0:nangls,jj])) / da
+    p_rings[0:nangls,0:n] = np.real(dft.ifft(pf_rings[0:nangls,0:n],axis=0)) / da
+    prods[0:nangls] = np.sum(p_rings[0:nangls,0:n],axis=1) * dt
+
+
+    dists[0:nangls] = gps_normsq + hps_normsq - 2*prods[0:nangls]
+    dists[0:nangls] = np.sqrt(np.abs(dists[0:nangls]))
+
+
+
+    nh2 = np.int(n/2)
+
+#
+#    zero-pad fourier coefficients of product
+#
+    wp.prinf('n=',n,1)
+    wp.prinf('nh2=',nh2,1)
+
+
+###    pf2_rings[0:nrots,0:n] = 88888888
+
+
+    nah2 = np.int(nangls/2)
+
+
+    wp.prinz('pf_rings, halfway - 1=',pf_rings[nah2-1,nh2],1)
+    wp.prinz('pf_rings, halfway + 1=',pf_rings[nah2,nh2],1)
+
+
+    pf2_rings[0:nah2,0:n] = pf_rings[0:nah2,0:n]
+    pf2_rings[nrots-nah2:nrots,0:n] = pf_rings[nah2:nangls,0:n]
+    pf2_rings[nah2:nrots-nah2,0:n] = np.zeros([nrots-nangls,n])
+
+
+
+    wp.prinz('pf_rings=',pf_rings[:,nh2],nangls)
+    wp.prinz('pf2_rings=',pf2_rings[:,nh2],nrots)
+
+
+#
+#    invert and find distances
+#
+    da2  = 1/nrots
+    p2_rings[0:nrots,0:n] = np.real(dft.ifft(pf2_rings[0:nrots,0:n],axis=0)) / da2
+    prods2 = np.sum(p2_rings[0:nrots,0:n],axis=1) * dt
+
+    dists2[0:nrots] = gps_normsq + hps_normsq - 2*prods2[0:nrots]
+    dists2[0:nrots] = np.sqrt(np.abs(dists2[0:nrots]))
+
+
+
+
+    return()
+
+#
+#
+#
+
+def slicedcramer_nufft(gs,hs,ts,n,r,p,nangls,vnorms):
 #
 #                            description:
 #
@@ -346,10 +1382,6 @@ def slicedcramer_nufft(hs,gs,ts,n,r,p,nangls,vnorms,kfs,freqs):
 #
 #  vnorms - nangls-length array containing the distances between each pair
 #    of projections
-#  kfs - n-length integer array containing the integer frequencies for each
-#    Fourier coefficient
-#  freqs - n-length real array containing the frequencies for each
-#    Fourier coefficient: freqs[k] = kfs[k] / (b-a)
 #
 #
 #                    return parameters:
@@ -358,6 +1390,8 @@ def slicedcramer_nufft(hs,gs,ts,n,r,p,nangls,vnorms,kfs,freqs):
 #
 #
 
+    kfs = np.empty(n,dtype='int32')
+    freqs = np.empty(n,dtype='float64')
     angls = np.empty(nangls+1,dtype='float64')
 
     fprojs_arr = np.empty([nangls,n],dtype='float64')
@@ -513,6 +1547,16 @@ def iftrs_fast(fzs,freqs,ts,fs,m,n):
 
     return()
 
+
+###    zzzs[0:n] = 1
+
+    for i in range(0,m):
+        gg = np.multiply(fzs[i,0:n],zzzs[0:n])
+        fs[i,0:n] = np.real(dft.ifft(gg))  * df * n
+
+
+    return()
+
 #
 #
 #
@@ -635,7 +1679,7 @@ def vnorm_fourier_fast(fzs,ts,n,a,b,p,fps,fpzs,kfs,freqs):
 #
 #
 
-def slicedcramer_dumb(hs,gs,ts,n,r,p,nangls,vnorms,kfs,freqs):
+def slicedcramer_dumb(gs,hs,ts,n,r,p,nangls,vnorms):
 #
 #                            description:
 #
@@ -662,10 +1706,6 @@ def slicedcramer_dumb(hs,gs,ts,n,r,p,nangls,vnorms,kfs,freqs):
 #
 #  vnorms - nangls-length array containing the distances between each pair
 #    of projections
-#  kfs - n-length integer array containing the integer frequencies for each
-#    Fourier coefficient
-#  freqs - n-length real array containing the frequencies for each
-#    Fourier coefficient: freqs[k] = kfs[k] / (b-a)
 #
 #
 #                    return parameters:
@@ -674,6 +1714,9 @@ def slicedcramer_dumb(hs,gs,ts,n,r,p,nangls,vnorms,kfs,freqs):
 #
 #
 
+    kfs = np.empty(n,dtype='int32')
+    freqs = np.empty(n,dtype='float64')
+#
     angls = np.empty(nangls+1,dtype='float64')
     fprojs_arr = np.empty([nangls,n],dtype='float64')
 
@@ -799,7 +1842,7 @@ def slicedcramer_dumb(hs,gs,ts,n,r,p,nangls,vnorms,kfs,freqs):
 #
 #
 
-def slicedwasser_nufft(hs,gs,ts,n,r,p,nangls,m,wdists,freqs,kfs):
+def slicedwasser_nufft(gs,hs,ts,n,r,p,nangls,m,wdists):
 #
 #                            description:
 #
@@ -828,10 +1871,6 @@ def slicedwasser_nufft(hs,gs,ts,n,r,p,nangls,m,wdists,freqs,kfs):
 #
 #  wdists - nangls-length array containing the distances between each pair
 #    of projections
-#  kfs - n-length integer array containing the integer frequencies for each
-#    Fourier coefficient
-#  freqs - n-length real array containing the frequencies for each
-#    Fourier coefficient: freqs[k] = kfs[k] / (b-a)
 #
 #
 #                    return parameters:
@@ -840,6 +1879,9 @@ def slicedwasser_nufft(hs,gs,ts,n,r,p,nangls,m,wdists,freqs,kfs):
 #
 #
 
+    kfs = np.empty(n,dtype='int32')
+    freqs = np.empty(n,dtype='float64')
+#
     angls = np.empty(nangls+1,dtype='float64')
 #
     hprojs_arr = np.empty([nangls,n],dtype='float64')
@@ -985,7 +2027,6 @@ def wassers_fast(hs,gs,ts,m,n,a,b,p,hps,gps,hinvs,ginvs,difs,k,wdists):
     hps[0:k,n]=1
 
 
-
     gl = np.cumsum(gs[0:k,0:n+1],axis=1)*hh
     gr = np.cumsum(gs[0:k,1:n+1],axis=1)*hh
 
@@ -1006,8 +2047,8 @@ def wassers_fast(hs,gs,ts,m,n,a,b,p,hps,gps,hinvs,ginvs,difs,k,wdists):
 #
 #    distance between inverse CDFs, by midpoint rule
 #
-    cdfinvs_all_c(ts,m,n,a,b,p,hps,hinvs,ivals_h,ys,k)
-    cdfinvs_all_c(ts,m,n,a,b,p,gps,ginvs,ivals_g,ys,k)
+    cdfinvs_all_c(ts,m,n,hps,hinvs,ivals_h,ys,k)
+    cdfinvs_all_c(ts,m,n,gps,ginvs,ivals_g,ys,k)
     difs[0:k,0:m] = hinvs[0:k,0:m] - ginvs[0:k,0:m]
 
 
@@ -1027,7 +2068,7 @@ def wassers_fast(hs,gs,ts,m,n,a,b,p,hps,gps,hinvs,ginvs,difs,k,wdists):
 #
 #
 
-def cdfinvs_all_c(ts,m,n,a,b,p,hps,hinvs,ivals,ys,k):
+def cdfinvs_all_c(ts,m,n,hps,hinvs,ivals,ys,k):
 
     path = os.getcwd()
     clib = ct.CDLL(os.path.join(path, 'cdfinvs.so'))
@@ -1056,7 +2097,7 @@ def cdfinvs_all_c(ts,m,n,a,b,p,hps,hinvs,ivals,ys,k):
 
 
     for ijk in range(0,k):
-        cdfinvs_c(ys,m,a,b,n,hinvs[ijk,:],hps[ijk,:],ts,ivals_h[ijk,:])
+        cdfinvs_c(ys,m,n,hinvs[ijk,:],hps[ijk,:],ts,ivals[ijk,:])
 
 
     return()
@@ -1065,7 +2106,193 @@ def cdfinvs_all_c(ts,m,n,a,b,p,hps,hinvs,ivals,ys,k):
 #
 #
 
-def slicedwasser_dumb(hs,gs,ts,n,r,p,nangls,m,wdists,freqs,kfs):
+def cdfinvs_c(ys,m,n,finvs,fints,tgrid,ivals):
+
+    path = os.getcwd()
+    clib = ct.CDLL(os.path.join(path, 'cdfinvs.so'))
+
+    clib.cdfinvs_march.argtypes= \
+        [np.ctypeslib.ndpointer(dtype=np.float64), \
+        np.ctypeslib.ndpointer(dtype=np.float64), \
+        ct.c_int, \
+        ct.c_int, \
+        np.ctypeslib.ndpointer(dtype=np.int32)]
+
+
+    clib.cdfinvs_march(ys,fints,n,m,ivals)
+
+    finvs[0:m] = (tgrid[ivals[0:m]]+tgrid[ivals[0:m]+1])/2
+
+
+    return()
+
+#
+#
+#
+
+
+def slicedlebesg_nufft(gs,hs,ts,n,r,p,nangls,vnorms,kfs,freqs):
+#
+#                            description:
+#
+#    This code evaluates the sliced Lebesgue distance between two functions
+#    h and g evaluated on a 2D grid of equispaced points. This code is
+#    vectorized and uses the FINUFFT to evaluate the projections; a slower,
+#    dumber, but more readable code, whose output should be identical
+#    up to round-off, is slicedcramer_dumb.
+#
+#
+#                        input parameters:
+#
+#  hs,gs - n-by-n real arrays containing the samples of h and g
+#    on [-r,r) x [-r,r) (only the left endpoints are included)
+#  ts - n-length real vector of equispaced nodes on [-r,r) (the left
+#    endpoint a is included, but not b)
+#  n - the number of samples on each dimension; assumed to be an even integer.
+#    To be clear, the total number of samples is n^2
+#  r - the radius of the interval
+#  p - the norm parameter. To use the infinity norm, set p<=0 or np.inf
+#  nangls - the number of projection angles used to evaluate the sliced distance
+#
+#
+#                        output parameters:
+#
+#  vnorms - nangls-length array containing the distances between each pair
+#    of projections
+#  kfs - n-length integer array containing the integer frequencies for each
+#    Fourier coefficient
+#  freqs - n-length real array containing the frequencies for each
+#    Fourier coefficient: freqs[k] = kfs[k] / (b-a)
+#
+#
+#                    return parameters:
+#
+#  dist - the sliced Cramer distance
+#
+#
+
+    angls = np.empty(nangls+1,dtype='float64')
+
+    fprojs_arr = np.empty([nangls,n],dtype='float64')
+    fhats_arr = np.empty([nangls,n],dtype='complex128')
+    fphats_arr = np.empty([nangls,n],dtype='complex128')
+    fps_arr = np.empty([nangls,n],dtype='float64')
+
+###    fprojs_arr[0:nangls,0:n] = 10000
+
+
+    fs = np.empty([n,n],dtype='float64')
+
+
+    czs = np.empty(n*nangls,dtype='complex128')
+    xs = np.empty(n*nangls,dtype='float64')    
+    ys = np.empty(n*nangls,dtype='float64')    
+    fs_comp = np.empty([n,n],dtype='complex128')
+
+
+    wp.prinf('nangls=',nangls,1)
+    wp.prin2('ts=',ts,n+1)
+    wp.prin2('r=',r,1)
+
+
+
+    fs[0:n,0:n] = hs[0:n,0:n] - gs[0:n,0:n]
+
+    rq = n/(4*r)
+###    wp.prin2('rq=',rq,1)
+
+#
+#    frequency indices and values, DFT ordering
+#
+    nh2=np.int(n/2)
+
+    kfs[0:n] = range(0,n)
+    kfs[nh2:n] = kfs[nh2:n] - n
+    freqs[0:n] = kfs[0:n] / (2*r)
+
+#
+#    angles and 2D frequencies
+#
+    rpi = np.pi
+    angls[0:nangls+1] = np.linspace(0,rpi,nangls+1)
+    dangl = rpi / nangls
+
+    wp.prin2('dangl=',dangl,1)
+
+
+    sfs_all = np.outer(np.cos(angls[0:nangls]),freqs[0:n])
+    tfs_all = np.outer(np.sin(angls[0:nangls]),freqs[0:n])
+#
+    xs[0:n*nangls] = 2*np.pi*np.reshape(sfs_all,[1,nangls*n]) / (2*rq)
+    ys[0:n*nangls] = 2*np.pi*np.reshape(tfs_all,[1,nangls*n]) / (2*rq)
+
+#
+#    compute the projections with the FINUFFT
+#
+    fs_comp[0:n,0:n] = fs[0:n,0:n]
+    finufft.nufft2d2(xs, ys, fs_comp, czs, eps=1e-15, isign=-1)
+    czs = czs / (2*rq)**2
+
+###    wp.prinz('czs=',czs,n*nangls)
+
+    fhats_arr[0:nangls,0:n] = np.reshape(czs[0:nangls*n],[nangls,n])
+
+
+#
+#    evaluate the sliced norm
+#
+    lnorms_fourier_fast(fhats_arr,ts,nangls,n,-r,r,p,\
+        fps_arr,fphats_arr,kfs,freqs,vnorms)
+
+    dww = 1/nangls
+    dist = lpnorm_fast(vnorms,nangls,p,1/nangls)
+
+
+    return(dist)
+
+#
+#
+#
+
+def lnorms_fourier_fast(fzs,ts,m,n,a,b,p,fps,fpzs,kfs,freqs,vnorms):
+#
+#    vectorized code for computing the p-norms of m functions,
+#    taking as inputs their Fourier transforms on a frequency grid.
+#
+
+    zzzs = np.empty(n,dtype='complex128')
+
+    nh2 = np.int(n/2)
+
+#
+#    phase factors
+#
+    zzzs[0:n] = np.exp(2*np.pi*1j*freqs[0:n]*a)
+
+
+#
+#    evaluate partial integrals and find norms
+#
+    iftrs_fast(fzs,freqs,ts,fps,m,n)
+
+    fpmaxs = np.max(np.abs(fps[0:m,0:n]),axis=1)
+
+    if (p <= 0 or p == np.inf):
+        vnorms[0:m] = fpmaxs[0:m]
+        return()
+
+    dt = (b-a) / n
+    vnorms[0:m] = la.norm(fps[0:m,0:n],ord=p,axis=1)* dt**(1/p)
+
+
+
+    return()
+
+#
+#
+#
+
+def slicedwasser_dumb(gs,hs,ts,n,r,p,nangls,m,wdists):
 #
 #                            description:
 #
@@ -1104,6 +2331,8 @@ def slicedwasser_dumb(hs,gs,ts,n,r,p,nangls,m,wdists,freqs,kfs):
 #  dist - the sliced Wasserstein distance
 #
 #
+    kfs = np.empty(n,dtype='int32')
+    freqs = np.empty(n,dtype='float64')
 
     angls = np.empty(nangls+1,dtype='float64')
 
@@ -1182,8 +2411,8 @@ def slicedwasser_dumb(hs,gs,ts,n,r,p,nangls,m,wdists,freqs,kfs):
 
         wp.prini(0,0)
         wdists[iang] = wasser(hprojs_arr[iang,:],gprojs_arr[iang,:],ts,m,n, \
-            -r,r,p,hps_arr[iang,:],gps_arr[iang,:],hinvs_arr[iang,:],ginvs_arr[iang,:],\
-            difs_arr[iang,:])
+            -r,r,p,hps_arr[iang,:],gps_arr[iang,:],hinvs_arr[iang,:], \
+            ginvs_arr[iang,:],difs_arr[iang,:])
         wp.prini(13,0)
 
     wp.prin2('wdists=',wdists,nangls)
@@ -1559,7 +2788,7 @@ def cdfinvs_march(yys,m,a,b,n,finvs,ygrid,tgrid,ivals):
 #
 #
 
-def slicedwasser_ps(hs,gs,ts,n,r,ps,nps,nangls,m,wdists,freqs,kfs,dists):
+def slicedwasser_ps(gs,hs,ts,n,r,ps,nps,nangls,m,wdists,freqs,kfs,dists):
 #
 #                            description:
 #
@@ -2673,175 +3902,14 @@ def evalmix2d_fast(ts,n,cens,wids,heis,ngaus,fs):
 #
 #
 
-def slicedlebesg_nufft(hs,gs,ts,n,r,p,nangls,vnorms,kfs,freqs):
-#
-#                            description:
-#
-#    This code evaluates the sliced Lebesgue distance between two functions
-#    h and g evaluated on a 2D grid of equispaced points. This code is
-#    vectorized and uses the FINUFFT to evaluate the projections; a slower,
-#    dumber, but more readable code, whose output should be identical
-#    up to round-off, is slicedcramer_dumb.
-#
-#
-#                        input parameters:
-#
-#  hs,gs - n-by-n real arrays containing the samples of h and g
-#    on [-r,r) x [-r,r) (only the left endpoints are included)
-#  ts - n-length real vector of equispaced nodes on [-r,r) (the left
-#    endpoint a is included, but not b)
-#  n - the number of samples on each dimension; assumed to be an even integer.
-#    To be clear, the total number of samples is n^2
-#  r - the radius of the interval
-#  p - the norm parameter. To use the infinity norm, set p<=0 or np.inf
-#  nangls - the number of projection angles used to evaluate the sliced distance
-#
-#
-#                        output parameters:
-#
-#  vnorms - nangls-length array containing the distances between each pair
-#    of projections
-#  kfs - n-length integer array containing the integer frequencies for each
-#    Fourier coefficient
-#  freqs - n-length real array containing the frequencies for each
-#    Fourier coefficient: freqs[k] = kfs[k] / (b-a)
-#
-#
-#                    return parameters:
-#
-#  dist - the sliced Cramer distance
-#
-#
-
-    angls = np.empty(nangls+1,dtype='float64')
-
-    fprojs_arr = np.empty([nangls,n],dtype='float64')
-    fhats_arr = np.empty([nangls,n],dtype='complex128')
-    fphats_arr = np.empty([nangls,n],dtype='complex128')
-    fps_arr = np.empty([nangls,n],dtype='float64')
-
-###    fprojs_arr[0:nangls,0:n] = 10000
-
-
-    fs = np.empty([n,n],dtype='float64')
-
-
-    czs = np.empty(n*nangls,dtype='complex128')
-    xs = np.empty(n*nangls,dtype='float64')    
-    ys = np.empty(n*nangls,dtype='float64')    
-    fs_comp = np.empty([n,n],dtype='complex128')
-
-
-    wp.prinf('nangls=',nangls,1)
-    wp.prin2('ts=',ts,n+1)
-    wp.prin2('r=',r,1)
-
-
-
-    fs[0:n,0:n] = hs[0:n,0:n] - gs[0:n,0:n]
-
-    rq = n/(4*r)
-###    wp.prin2('rq=',rq,1)
-
-#
-#    frequency indices and values, DFT ordering
-#
-    nh2=np.int(n/2)
-
-    kfs[0:n] = range(0,n)
-    kfs[nh2:n] = kfs[nh2:n] - n
-    freqs[0:n] = kfs[0:n] / (2*r)
-
-#
-#    angles and 2D frequencies
-#
-    rpi = np.pi
-    angls[0:nangls+1] = np.linspace(0,rpi,nangls+1)
-    dangl = rpi / nangls
-
-    wp.prin2('dangl=',dangl,1)
-
-
-    sfs_all = np.outer(np.cos(angls[0:nangls]),freqs[0:n])
-    tfs_all = np.outer(np.sin(angls[0:nangls]),freqs[0:n])
-#
-    xs[0:n*nangls] = 2*np.pi*np.reshape(sfs_all,[1,nangls*n]) / (2*rq)
-    ys[0:n*nangls] = 2*np.pi*np.reshape(tfs_all,[1,nangls*n]) / (2*rq)
-
-#
-#    compute the projections with the FINUFFT
-#
-    fs_comp[0:n,0:n] = fs[0:n,0:n]
-    finufft.nufft2d2(xs, ys, fs_comp, czs, eps=1e-15, isign=-1)
-    czs = czs / (2*rq)**2
-
-###    wp.prinz('czs=',czs,n*nangls)
-
-    fhats_arr[0:nangls,0:n] = np.reshape(czs[0:nangls*n],[nangls,n])
-
-
-#
-#    evaluate the sliced norm
-#
-    lnorms_fourier_fast(fhats_arr,ts,nangls,n,-r,r,p,\
-        fps_arr,fphats_arr,kfs,freqs,vnorms)
-
-    dww = 1/nangls
-    dist = lpnorm_fast(vnorms,nangls,p,1/nangls)
-
-
-    return(dist)
-
-#
-#
-#
-
-def lnorms_fourier_fast(fzs,ts,m,n,a,b,p,fps,fpzs,kfs,freqs,vnorms):
-#
-#    vectorized code for computing the p-norms of m functions,
-#    taking as inputs their Fourier transforms on a frequency grid.
-#
-
-    zzzs = np.empty(n,dtype='complex128')
-
-    nh2 = np.int(n/2)
-
-#
-#    phase factors
-#
-    zzzs[0:n] = np.exp(2*np.pi*1j*freqs[0:n]*a)
-
-
-#
-#    evaluate partial integrals and find norms
-#
-    iftrs_fast(fzs,freqs,ts,fps,m,n)
-
-    fpmaxs = np.max(np.abs(fps[0:m,0:n]),axis=1)
-
-    if (p <= 0 or p == np.inf):
-        vnorms[0:m] = fpmaxs[0:m]
-        return()
-
-    dt = (b-a) / n
-    vnorms[0:m] = la.norm(fps[0:m,0:n],ord=p,axis=1)* dt**(1/p)
-
-
-
-    return()
-
-#
-#
-#
-
-def slicedlebesg_dumb(hs,gs,ts,n,r,p,nangls,vnorms,kfs,freqs):
+def slicedlebesg_dumb(gs,hs,ts,n,r,p,nangls,vnorms,kfs,freqs):
 #
 #                            description:
 #
 #    This code evaluates the sliced Lebesgue distance between two functions
 #    h and g evaluated on a 2D grid of equispaced points. This code is
 #    slow and dumb, without vectorization or use of the NUFFT; a fast version,
-#    whose output should be identical up to round-off, is slicedcramer_nufft.
+#    whose output should be identical up to round-off, is slicedlebesg_nufft.
 #
 #
 #                        input parameters:
@@ -3049,226 +4117,3 @@ def lnorm_fourier_dumb(fzs,ts,n,a,b,p,fps,fpzs,kfs,freqs):
 
 
     return(vnorm)
-
-#
-#
-#
-
-def trap_grid_slow(fvals,a,b,n):
-#
-#    evaluates integral over [a,b] by trapezoidal rule;
-#    assumes data is on equispaced grid of n+1 points,
-#    including endpoints a and b
-#
-    hh = (b-a)/n
-
-    ftrap = fvals[0]*hh/2
-
-    for i in range(1,n):
-        ftrap = ftrap + fvals[i]*hh
-
-    ftrap = ftrap + fvals[n]*hh/2
-
-
-    return(ftrap)
-
-#
-#
-#
-
-def vnorm_quad_uncen(fhandle,par1,par2,a,b,p):
-#
-#    computes volterra norm of specified function,
-#    without centering
-#
-#
-#    . . . evaluating p-th power of partial integrals
-#
-    pars_ext=(a,p,fhandle,par1,par2)
-    [vnorm,err] = scint.quad(eval_intfun,a,b,pars_ext)
-
-    vnorm = vnorm**(1/p)
-
-    wp.prin2('vnorm=',vnorm,1)
-    wp.prin2('err=',err,1)
-
-###    exit()
-
-    return(vnorm)
-
-#
-#
-#
-
-def eval_intfun(t,a,p,fhandle,par1,par2):
-#
-#    integrates specified function on [a,t],
-#    and raises to p-th power
-#
-#    view this subroutine as function of t
-#
-
-#
-#    . . . put parameters into a tuple and call quadpack
-#
-    pars = (par1,par2)
-
-    [fint,err] = scint.quad(fhandle,a,t,pars)
-    fint = abs(fint)**p
-
-
-    return(fint)
-
-#
-#
-#
-
-def fcoef_quad(fh,par0,par1,freq,a,b):
-
-
-###    wp.prin2('par0=',par0,1)
-
-
-    pars=(par0,par1,fh,freq,a,b)
-
-    [fcos,err] = scint.quad(evalpcos44,a,b,pars,epsabs=1e-14)
-    [fsin,err2] = scint.quad(evalpsin44,a,b,pars,epsabs=1e-14)
-
-    wp.prin2('fsin=',fsin,1)
-    wp.prin2('fcos=',fcos,1)
-    wp.prin2('err=',err,1)
-    wp.prin2('err2=',err2,1)
-
-
-###    fz = (fcos - fsin*1j) / (b-a)
-
-    fz = fcos - fsin*1j
-
-    return(fz)
-
-#
-#
-#
-
-def evalpsin44(t,parf0,parf1,fh,freq,a,b):
-
-    ff = fh(t,parf0,parf1)
-
-
-    wp.prin2('ff=',ff,1)
-
-    pp = ff * np.sin(2*np.pi*freq*t)
-
-
-    return(pp)
-
-#
-#
-#
-
-def evalpcos44(t,parf0,parf1,fh,freq,a,b):
-
-    ff = fh(t,parf0,parf1)
-
-
-    wp.prin2('ff=',ff,1)
-
-    pp = ff * np.cos(2*np.pi*freq*t)
-
-
-    return(pp)
-
-#
-#
-#
-
-def fourmix1d(tf,pars,ngs):
-#
-#    analytic formula for the fourier transform of a
-#    linear combination of L1 normalized gaussians
-#
-    ws=np.empty(ngs,dtype='float64')
-    sigs=np.empty(ngs,dtype='float64')
-    cens=np.empty(ngs,dtype='float64')
-
-    for i in range(0,ngs):
-        sigs[i] = pars[i,0]
-        cens[i] = pars[i,1]
-        ws[i] = pars[i,2]
-
-
-    ff = 0.0
-    for i in range(0,ngs):
-        gg = evalgausn1d_fourier(tf,cens[i],sigs[i])
-        ff = ff + ws[i]*gg
-
-
-    return(ff)
-
-#
-#
-#
-
-def evalgausn1d_fourier(tf,cen,wid):
-#
-#    fourier transform of L1 normalized, *uncentered* gaussian
-#
-
-    dpi = np.pi
-    zi = 1j
-
-#
-    ff = np.exp(-dpi**2 * tf**2 * wid)
-    fz = ff*(np.cos(2*dpi*cen*tf) - zi*np.sin(2*dpi*cen*tf))
-
-
-###    wp.prin2('cen=',cen,1)
-
-###    exit()
-###    wp.prin2('ff=',ff,1)
-###    wp.prinz('fz=',fz,2000)
-
-
-    return(fz)
-
-#
-#
-#
-
-def evalmix1d(t,pars,ngs):
-
-    ws=np.empty(ngs,dtype='float64')
-    sigs=np.empty(ngs,dtype='float64')
-    cens=np.empty(ngs,dtype='float64')
-
-    for i in range(0,ngs):
-        sigs[i] = pars[i,0]
-        cens[i] = pars[i,1]
-        ws[i] = pars[i,2]
-
-
-    f = 0.0
-    for i in range(0,ngs):
-        gg = evalgausn1d(t,cens[i],sigs[i])
-        f = f + ws[i]*gg
-
-
-
-    return(f)
-
-#
-#
-#
-
-def evalgausn1d(t,cen,wid):
-
-    dpi = np.pi
-
-    f = np.exp(-(t-cen)**2 / wid)
-    f = f / np.sqrt(dpi*wid)
-
-    return(f)
-
-#
-#
-#
